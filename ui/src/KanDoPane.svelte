@@ -259,6 +259,66 @@
     await store.closeActiveBoard(true);
   };
 
+  // Add placeholder API functions for the new menu items
+  const publishBoard = async () => {
+    try {
+      const boardData = {
+        boardId: encodeHashToBase64(activeBoard.hash),
+        name: $state.name,
+        description: `Published board: ${$state.name}`,
+        timestamp: Date.now()
+      };
+      
+      const response = await fetch('/api/publish-board', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(boardData)
+      });
+      
+      if (response.ok) {
+        console.log('Board published successfully');
+        // TODO: Add success notification
+      } else {
+        console.error('Failed to publish board');
+        // TODO: Add error notification
+      }
+    } catch (error) {
+      console.error('Error publishing board:', error);
+      // TODO: Add error notification
+    }
+  };
+
+  const addCloudNode = async () => {
+    try {
+      const nodeData = {
+        boardId: encodeHashToBase64(activeBoard.hash),
+        nodeType: 'cloud',
+        timestamp: Date.now()
+      };
+      
+      const response = await fetch('/api/add-cloud-node', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(nodeData)
+      });
+      
+      if (response.ok) {
+        console.log('Cloud node added successfully');
+        // TODO: Add success notification
+      } else {
+        console.error('Failed to add cloud node');
+        // TODO: Add error notification
+      }
+    } catch (error) {
+      console.error('Error adding cloud node:', error);
+      // TODO: Add error notification
+    }
+  };
+
   let editBoardDialog;
   let dragOn = true;
   let draggingHandled = true;
@@ -535,6 +595,20 @@
                 /> <span>Export</span>
               </sl-menu-item>
             </DisableForOs>
+            <sl-menu-item on:click={publishBoard} class="publish-board">
+              <SvgIcon
+                icon="faShare"
+                style="background: transparent; opacity: .5; position: relative; top: -2px;"
+                size="14px"
+              /> <span>Publish board</span>
+            </sl-menu-item>
+            <sl-menu-item on:click={addCloudNode} class="add-cloud-node">
+              <SvgIcon
+                icon="network"
+                style="background: transparent; opacity: .5; position: relative; top: -2px;"
+                size="14px"
+              /> <span>Add cloud node</span>
+            </sl-menu-item>
             <sl-menu-item
               on:click={() => {
                 store.archiveBoard(activeBoard.hash);
@@ -1124,12 +1198,10 @@
     line-height: 36px;
   }
 
-  .right-items .board-button::part(base) {
-    font-size: 24px;
-  }
-
-  .board-button {
-    margin-left: 10px;
+  .board-button.close::part(label) {
+    padding: 0 0 0 0;
+    height: 36px;
+    line-height: 36px;
   }
 
   .board-button.settings {
@@ -1144,6 +1216,8 @@
   .board-export span,
   .board-archive span,
   .board-options .leave-board span,
+  .board-options .publish-board span,
+  .board-options .add-cloud-node span,
   .board-options .participants span {
     font-size: 16px;
     font-weight: bold;
