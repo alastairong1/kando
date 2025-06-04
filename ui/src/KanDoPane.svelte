@@ -38,6 +38,7 @@
   import FeedElement from "./FeedElement.svelte";
   import CommitItem from "./CommitItem.svelte";
   import { HoloHashMap } from "@holochain-open-dev/utils";
+  import { makeAuthenticatedRequest } from "./utils/tokenManager";
 
   onMount(async () => {
     onVisible(columnNameElem, () => {
@@ -259,29 +260,33 @@
     await store.closeActiveBoard(true);
   };
 
-  // Add placeholder API functions for the new menu items
+  // Updated publish board function using proper token management
   const publishBoard = async () => {
     try {
-      const boardData = {
+      // TODO: Replace with actual payload structure for publishing a board
+      const workloadData = {
+        type: 'publish_board',
         boardId: encodeHashToBase64(activeBoard.hash),
-        name: $state.name,
+        boardName: $state.name,
         description: `Published board: ${$state.name}`,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        // Add other required fields based on the workload API specification
+        config: {
+          // Placeholder config object
+        }
       };
       
-      const response = await fetch('/api/publish-board', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(boardData)
-      });
+      const response = await makeAuthenticatedRequest(
+        'https://api.dev.holo.host/protected/v1/workload',
+        workloadData
+      );
       
       if (response.ok) {
-        console.log('Board published successfully');
+        const result = await response.json();
+        console.log('Board published successfully:', result);
         // TODO: Add success notification
       } else {
-        console.error('Failed to publish board');
+        console.error('Failed to publish board:', response.status, response.statusText);
         // TODO: Add error notification
       }
     } catch (error) {
@@ -290,27 +295,35 @@
     }
   };
 
+  // Updated add cloud node function using proper token management
   const addCloudNode = async () => {
     try {
-      const nodeData = {
+      // TODO: Replace with actual payload structure for adding a cloud node
+      const workloadData = {
+        type: 'add_cloud_node',
         boardId: encodeHashToBase64(activeBoard.hash),
         nodeType: 'cloud',
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        // Add other required fields based on the workload API specification
+        config: {
+          // Placeholder config object for cloud node
+          nodeSpec: {
+            // Node specifications
+          }
+        }
       };
       
-      const response = await fetch('/api/add-cloud-node', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(nodeData)
-      });
+      const response = await makeAuthenticatedRequest(
+        'https://api.dev.holo.host/protected/v1/workload',
+        workloadData
+      );
       
       if (response.ok) {
-        console.log('Cloud node added successfully');
+        const result = await response.json();
+        console.log('Cloud node added successfully:', result);
         // TODO: Add success notification
       } else {
-        console.error('Failed to add cloud node');
+        console.error('Failed to add cloud node:', response.status, response.statusText);
         // TODO: Add error notification
       }
     } catch (error) {
