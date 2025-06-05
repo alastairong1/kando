@@ -1,0 +1,19 @@
+{
+  "name": "Demo Board",
+  "groups": [
+    {"id": "column-1", "name": "To Do"},
+    {"id": "column-2", "name": "In Progress"},
+    {"id": "column-3", "name": "Done"}
+  ],
+  "grouping": {
+    "column-1": ["card-1", "card-2"],
+    "column-2": ["card-3"],
+    "column-3": ["card-4"]
+  },
+  "cards": [
+    {"id": "card-1", "props": {"title": "Task 1", "description": "Example description"}},
+    {"id": "card-2", "props": {"title": "Task 2", "description": "Another example"}},
+    {"id": "card-3", "props": {"title": "Task 3", "description": "Work in progress"}},
+    {"id": "card-4", "props": {"title": "Task 4", "description": "Completed"}}
+  ]
+}
