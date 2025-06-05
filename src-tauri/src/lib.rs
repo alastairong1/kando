@@ -87,9 +87,9 @@ async fn setup(handle: AppHandle) -> anyhow::Result<()> {
 
 fn network_config() -> NetworkConfig {
     let mut network_config = NetworkConfig::default();
-    network_config.signal_url = url2::url2!("{}", "wss://sbd-0.main.infra.holo.host");
-    network_config.bootstrap_url = url2::url2!("{}", "https://bootstrap-1.infra.holochain.org");
-    network_config.webrtc_config = Some(json!({ "iceServers": [ { "urls": ["stun:stun-0.main.infra.holo.host:443"] }]}));
+    network_config.signal_url = url2::url2!("{}", "https://dev-test-bootstrap2.holochain.org/");
+    network_config.bootstrap_url = url2::url2!("{}", "wss://dev-test-bootstrap2.holochain.org/");
+    network_config.webrtc_config = Some(json!({ "iceServers": [ { "urls": ["stun:stun.l.google.com:19302"] }]}));
 
     // Don't use the bootstrap service on tauri dev mode
     if tauri::is_dev() {
