@@ -84,9 +84,10 @@ npm run mock-server
 ```
 
 The mock server exposes the `get_documents_with_tag`, `get_commits_for_document`
-and `get_commit` endpoints on `http://localhost:3001`. Update `fetchBoardState`
-to point to this server to see the board snapshot retrieved through the API
-chain.
+and `get_commit` endpoints on `http://localhost:3001`. Set the `BOARD_API_BASE`
+constant in `static-board/src/App.svelte` to this server (e.g.
+`http://localhost:3001/<dna>/<id>/content`) to load the board snapshot through
+the API chain.
 
 ## Running the backend tests
 

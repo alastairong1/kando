@@ -5,15 +5,14 @@
 
   let board = null;
 
-  const params = new URLSearchParams(window.location.search);
-  const gatewayDomain = params.get('gateway');
-  const dnaHash = params.get('dna');
-  const id = params.get('id');
-  const config = gatewayDomain && dnaHash && id ? { gatewayDomain, dnaHash, id } : {};
+  // Base URL for the board API endpoints. Set this to your gateway
+  // domain plus the DNA hash and cell id you want to read from, ending
+  // with `/content`.
+  const BOARD_API_BASE = 'http://localhost:3001/mock-dna/mock-id/content';
 
   onMount(async () => {
     try {
-      board = await fetchBoardState(config);
+      board = await fetchBoardState(BOARD_API_BASE);
     } catch (e) {
       console.error('Failed to load board', e);
     }

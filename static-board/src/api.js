@@ -1,8 +1,8 @@
-export async function fetchBoardState(config = {}) {
-  const { gatewayDomain, dnaHash, id } = config;
-
-  if (!gatewayDomain || !dnaHash || !id) {
-    // Fallback to local mock data
+// Fetches the latest board state from a base URL exposing the Syn endpoints.
+// If no URL is provided, the function falls back to loading `board.json` from
+// the public folder.
+export async function fetchBoardState(baseUrl) {
+  if (!baseUrl) {
     const res = await fetch('/board.json');
     if (!res.ok) {
       throw new Error('Failed to load board.json');
@@ -13,7 +13,7 @@ export async function fetchBoardState(config = {}) {
   const callMethod = async (method, payloadObj) => {
     const jsonString = JSON.stringify(payloadObj);
     const payload = btoa(jsonString);
-    const url = `${gatewayDomain}/${dnaHash}/${id}/content/${method}?payload=${payload}`;
+    const url = `${baseUrl}/${method}?payload=${payload}`;
     const res = await fetch(url);
     if (!res.ok) {
       throw new Error(`Failed ${method}: ${res.status}`);
