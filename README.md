@@ -63,7 +63,31 @@ It will also bring up the Holochain Playground for advanced introspection of the
 npm run dev
 ```
 
-This will not launch a UI, you will have to open a browser window and navigate to the Local address provided by VITE. It can take a moment for the UI to come up after visiting the URL, let it load. 
+This will not launch a UI, you will have to open a browser window and navigate to the Local address provided by VITE. It can take a moment for the UI to come up after visiting the URL, let it load.
+
+## Static board snapshot
+
+The `static-board` folder contains a small Svelte project that renders a read-only
+board using mock data. To view it locally:
+
+```bash
+cd static-board
+npm install
+npm run dev
+```
+
+This starts the Vite development server. To test the HTTP API calls used by the
+viewer you can also run the mock server in a separate terminal:
+
+```bash
+npm run mock-server
+```
+
+The mock server exposes the `get_documents_with_tag`, `get_commits_for_document`
+and `get_commit` endpoints on `http://localhost:3001`. Set the `BOARD_API_BASE`
+constant in `static-board/src/App.svelte` to this server (e.g.
+`http://localhost:3001/<dna>/<id>/content`) to load the board snapshot through
+the API chain.
 
 ## Running the backend tests
 
