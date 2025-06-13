@@ -8,7 +8,6 @@
 
     $:iconStr = () => {
         let i = svgIcons[icon]
-        if (!i) console.log("missing icon for ", icon)
         if (color) {
             i = i.replace("<svg",`<svg fill="${color}"`)
         }

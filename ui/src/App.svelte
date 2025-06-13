@@ -64,17 +64,12 @@
         try {
           await initializeHotReload();
         } catch (e) {
-          console.warn(
-            "Could not initialize applet hot-reloading. This is only expected to work in a We context in dev mode."
-          );
         }
       }
       let tokenResp;
       if (!isWeaveContext()) {
-        console.log("adminPort is", adminPort);
         if (adminPort) {
           const url = `ws://localhost:${adminPort}`;
-          console.log("connecting to admin port at:", url);
           const adminWebsocket = await AdminWebsocket.connect({
             url: new URL(url),
           });
@@ -82,12 +77,9 @@
             installed_app_id: appId,
           });
           const x = await adminWebsocket.listApps({});
-          console.log("apps", x);
           const cellIds = await adminWebsocket.listCellIds();
-          console.log("CELL IDS", cellIds);
           await adminWebsocket.authorizeSigningCredentials(cellIds[0]);
         }
-        console.log("appPort and Id is", appPort, appId);
         const params: AppWebsocketConnectionOptions = { url: new URL(url), defaultTimeout: 240000 };
         if (tokenResp) params.token = tokenResp.token;
         client = await AppWebsocket.connect(params);

@@ -10,35 +10,44 @@ let refreshTokenExpiry: number | null = null;
 const getBearerToken = async (): Promise<string> => {
   try {
     // TODO: Replace with actual API key
-    const apiKey = 'YOUR_API_KEY_HERE';
+    const apiKey = 'v0-0196d981676472c486bab2f676b9135a';
+    
+    
+    const url = 'https://api.dev.holo.host/public/v1/auth/login-with-apikey';
+    const headers = {
+      'x-api-key': apiKey,
+      'Content-Type': 'application/json',
+    };
+    
     
     // Try to get a new token
-    const response = await fetch('https://api.dev.holo.host/public/v1/auth/login-with-apikey', {
+    const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
     });
+    
     
     if (response.ok) {
       const data = await response.json();
+      
       
       // Store both tokens with proper expiry
       cachedAccessToken = data.access_token;
       cachedRefreshToken = data.refresh_token;
       
-      // TODO: Set proper access token expiry based on API response (placeholder: 1 hour)
-      accessTokenExpiry = Date.now() + (60 * 60 * 1000);
+      // Access token is short lived (5 minutes according to API docs)
+      accessTokenExpiry = Date.now() + (5 * 60 * 1000);
       // Refresh token is valid for 30 days
       refreshTokenExpiry = Date.now() + (30 * 24 * 60 * 60 * 1000);
       
       return data.access_token;
     } else {
-      throw new Error(`Authentication failed: ${response.status}`);
+      const errorText = await response.text();
+      
+      
+      throw new Error(`Authentication failed: ${response.status} - ${errorText}`);
     }
   } catch (error) {
-    console.error('Error getting bearer token:', error);
     throw error;
   }
 };
@@ -68,8 +77,8 @@ const refreshBearerToken = async (): Promise<string> => {
       cachedAccessToken = data.access_token;
       cachedRefreshToken = data.refresh_token;
       
-      // TODO: Set proper access token expiry based on API response (placeholder: 1 hour)
-      accessTokenExpiry = Date.now() + (60 * 60 * 1000);
+      // Access token is short lived (5 minutes according to API docs)
+      accessTokenExpiry = Date.now() + (5 * 60 * 1000);
       // Refresh token is valid for 30 days
       refreshTokenExpiry = Date.now() + (30 * 24 * 60 * 60 * 1000);
       
@@ -78,7 +87,6 @@ const refreshBearerToken = async (): Promise<string> => {
       throw new Error(`Token refresh failed: ${response.status}`);
     }
   } catch (error) {
-    console.error('Error refreshing bearer token:', error);
     throw error;
   }
 };
@@ -96,7 +104,6 @@ const getValidToken = async (): Promise<string> => {
       const refreshedToken = await refreshBearerToken();
       return refreshedToken;
     } catch (error) {
-      console.log('Token refresh failed, getting new token');
       // Clear invalid tokens
       clearTokens();
     }
@@ -116,41 +123,50 @@ const clearTokens = (): void => {
 };
 
 // Helper function to make authenticated API calls with retry logic
-export const makeAuthenticatedRequest = async (url: string, payload: any): Promise<Response> => {
+export const makeAuthenticatedRequest = async (url: string, payload: any, method: string = 'POST'): Promise<Response> => {
   try {
     const token = await getValidToken();
     
-    const response = await fetch(url, {
-      method: 'POST',
+    const requestOptions: RequestInit = {
+      method: method,
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload)
-    });
+    };
+
+    // Add body for POST requests
+    if (method === 'POST' && payload) {
+      requestOptions.body = JSON.stringify(payload);
+    }
+    
+    
+    const response = await fetch(url, requestOptions);
 
     // If we get a 401, the token might be expired - try once more with a fresh token
     if (response.status === 401) {
-      console.log('Got 401, trying with fresh token');
       // Clear the cached tokens and get a fresh one
       clearTokens();
       const freshToken = await getValidToken();
       
-      const retryResponse = await fetch(url, {
-        method: 'POST',
+      const retryRequestOptions: RequestInit = {
+        method: method,
         headers: {
           'Authorization': `Bearer ${freshToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)
-      });
+      };
+
+      if (method === 'POST' && payload) {
+        retryRequestOptions.body = JSON.stringify(payload);
+      }
       
+      const retryResponse = await fetch(url, retryRequestOptions);
       return retryResponse;
     }
     
     return response;
   } catch (error) {
-    console.error('Error making authenticated request:', error);
     throw error;
   }
 };

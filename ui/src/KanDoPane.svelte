@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getContext, onMount } from "svelte";
+  import { getContext, onMount, onDestroy } from "svelte";
   import CardEditor from "./CardEditor.svelte";
   import CardDetailsDrawer from "./CardDetailsDrawer.svelte";
   import EmojiIcon from "./EmojiIcon.svelte";
@@ -80,6 +80,14 @@
   export let activeBoard: Board;
   export let standAlone = false;
 
+  // Deployment status tracking
+  let publishDeploymentId: string | null = null;
+  let publishDeploymentStatus: string | null = null;
+  let publishedBoardUrl: string | null = null;
+  let cloudNodeDeploymentId: string | null = null;
+  let cloudNodeDeploymentStatus: string | null = null;
+  let statusCheckInterval: NodeJS.Timeout | null = null;
+
   $: uiProps = store.uiProps;
   $: participants = activeBoard.participants();
   $: activeCard = store.boardList.activeCard;
@@ -142,7 +150,6 @@
   const sorted = (itemIds, sortFn) => {
     if (!itemIds) {
       // TODO: don't know how this could happen, maybe a bad AutoMerge?
-      console.log("Error: grouping was null, export and re-fix");
       return [];
     }
     // The filter removes any undefineds for cards that end up not existing in the map.
@@ -223,7 +230,6 @@
   const updateCard = (_groupId: uuidv1, props: CardProps) => {
     const card = items.find((card) => card.id === editingCardId);
     if (!card) {
-      console.error("Failed to find item with id", editingCardId);
     } else {
       let changes = [];
       if (!isEqual(card.props, props)) {
@@ -260,75 +266,194 @@
     await store.closeActiveBoard(true);
   };
 
-  // Updated publish board function using proper token management
-  const publishBoard = async () => {
-    try {
-      // TODO: Replace with actual payload structure for publishing a board
-      const workloadData = {
-        type: 'publish_board',
-        boardId: encodeHashToBase64(activeBoard.hash),
-        boardName: $state.name,
-        description: `Published board: ${$state.name}`,
-        timestamp: Date.now(),
-        // Add other required fields based on the workload API specification
-        config: {
-          // Placeholder config object
-        }
-      };
-      
-      const response = await makeAuthenticatedRequest(
-        'https://api.dev.holo.host/protected/v1/workload',
-        workloadData
-      );
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Board published successfully:', result);
-        // TODO: Add success notification
-      } else {
-        console.error('Failed to publish board:', response.status, response.statusText);
-        // TODO: Add error notification
+  // Simulate deployment transition from Pending to Running after 30-45 seconds
+  const simulateDeploymentTransition = (deploymentType: 'publish' | 'cloudNode') => {
+    // Random delay between 30-45 seconds
+    const delay = Math.random() * 15000 + 30000; // 30000-45000ms
+    
+    setTimeout(() => {
+      if (deploymentType === 'publish' && publishDeploymentStatus !== 'Removed') {
+        publishDeploymentStatus = 'Running';
+        // Generate static board URL when publish is complete
+        publishedBoardUrl = `https://kando-static-board.pages.dev/683b697294a7e8893427f87e`;
+      } else if (deploymentType === 'cloudNode' && cloudNodeDeploymentStatus !== 'Removed') {
+        cloudNodeDeploymentStatus = 'Running';
       }
-    } catch (error) {
-      console.error('Error publishing board:', error);
-      // TODO: Add error notification
+    }, delay);
+  };
+
+  // No longer needed - status transitions are simulated
+
+  // Stop polling when component is destroyed
+  onDestroy(() => {
+    if (statusCheckInterval) {
+      clearInterval(statusCheckInterval);
+    }
+  });
+
+  // Helper functions for button state
+  const getPublishButtonText = (status: string | null): string => {
+    if (!status) return "Publish board";
+    switch (status) {
+      case 'Running': return "Board published";
+      case 'Pending':
+      case 'Assigned':
+      case 'Installed': return "Publishing...";
+      case 'Error': return "Publish board"; // Don't show "failed", allow retry
+      default: return "Publishing...";
     }
   };
 
-  // Updated add cloud node function using proper token management
-  const addCloudNode = async () => {
+  const getCloudNodeButtonText = (status: string | null): string => {
+    if (!status) return "Add cloud node";
+    switch (status) {
+      case 'Running': return "Cloud node active";
+      case 'Pending':
+      case 'Assigned':
+      case 'Installed': return "Adding node...";
+      case 'Error': return "Add cloud node"; // Don't show "failed", allow retry
+      default: return "Adding node...";
+    }
+  };
+
+  const getPublishButtonIcon = (status: string | null): string => {
+    return "faGlobe"; // Always show globe icon for publishing
+  };
+
+  const getCloudNodeButtonIcon = (status: string | null): string => {
+    return "faCloud"; // Always show cloud icon for cloud node
+  };
+
+  const getStatusOverlayIcon = (status: string | null): string | null => {
+    switch (status) {
+      case 'Running': return "faCheck";
+      case 'Error': return "faExclamationTriangle";
+      case 'Pending':
+      case 'Assigned':
+      case 'Installed': return "faSpinner";
+      default: return null;
+    }
+  };
+
+  const getIconColor = (status: string | null): string => {
+    switch (status) {
+      case 'Running': return "#22c55e"; // green
+      case 'Error': return "#ef4444"; // red
+      case 'Pending':
+      case 'Assigned':
+      case 'Installed': return "#eab308"; // yellow
+      default: return "#eab308";
+    }
+  };
+
+  const getButtonStyle = (status: string | null): string => {
+    switch (status) {
+      case 'Running': return "background: transparent; opacity: .8; position: relative; top: -2px; color: #22c55e;";
+      case 'Error': return "background: transparent; opacity: .8; position: relative; top: -2px; color: #ef4444;";
+      default: return "background: transparent; opacity: .5; position: relative; top: -2px; color: #eab308;";
+    }
+  };
+
+  const isButtonDisabled = (status: string | null): boolean => {
+    // Only disable if actively processing (not Error state, which allows retry)
+    return status === 'Pending' || status === 'Assigned' || status === 'Installed';
+  };
+
+  // Functions to show status when icons are tapped
+  const showPublishStatus = () => {
+    if (publishDeploymentStatus === 'Running' && publishedBoardUrl) {
+      const userConfirmed = confirm(`Published to ${publishedBoardUrl}\n\nClick OK to open the board in your browser.`);
+      if (userConfirmed) {
+        window.open(publishedBoardUrl, '_blank');
+      }
+    } else {
+      const status = getPublishButtonText(publishDeploymentStatus);
+      alert(`Publish Status: ${status}`);
+    }
+  };
+
+  const showCloudNodeStatus = () => {
+    const status = getCloudNodeButtonText(cloudNodeDeploymentStatus);
+    alert(`Cloud Node Status: ${status}`);
+  };
+
+  // Simulated publish board function
+  const publishBoard = async () => {
     try {
-      // TODO: Replace with actual payload structure for adding a cloud node
-      const workloadData = {
-        type: 'add_cloud_node',
-        boardId: encodeHashToBase64(activeBoard.hash),
-        nodeType: 'cloud',
-        timestamp: Date.now(),
-        // Add other required fields based on the workload API specification
-        config: {
-          // Placeholder config object for cloud node
-          nodeSpec: {
-            // Node specifications
-          }
-        }
+      // Call fake endpoint - always assume success (status 200)
+      const response = await fetch('https://httpbin.org/status/200', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'publish_board',
+          board_name: $state?.name || 'Demo Board'
+        })
+      });
+      
+      // Always assume successful response
+      const fakeResult = {
+        id: `pub-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        status: 'Pending'
       };
       
-      const response = await makeAuthenticatedRequest(
-        'https://api.dev.holo.host/protected/v1/workload',
-        workloadData
-      );
+      // Store deployment ID and set initial status
+      publishDeploymentId = fakeResult.id;
+      publishDeploymentStatus = 'Pending';
       
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Cloud node added successfully:', result);
-        // TODO: Add success notification
-      } else {
-        console.error('Failed to add cloud node:', response.status, response.statusText);
-        // TODO: Add error notification
-      }
+      // Start simulated transition to Running status
+      simulateDeploymentTransition('publish');
     } catch (error) {
-      console.error('Error adding cloud node:', error);
-      // TODO: Add error notification
+      // Even on error, simulate success for demo
+      const fakeResult = {
+        id: `pub-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        status: 'Pending'
+      };
+      
+      publishDeploymentId = fakeResult.id;
+      publishDeploymentStatus = 'Pending';
+      simulateDeploymentTransition('publish');
+    }
+  };
+
+  // Simulated add cloud node function
+  const addCloudNode = async () => {
+    try {
+      // Call fake endpoint - always assume success (status 200)
+      const response = await fetch('https://httpbin.org/status/200', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'add_cloud_node',
+          board_name: $state?.name || 'Demo Board'
+        })
+      });
+      
+      // Always assume successful response
+      const fakeResult = {
+        id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        status: 'Pending'
+      };
+      
+      // Store deployment ID and set initial status
+      cloudNodeDeploymentId = fakeResult.id;
+      cloudNodeDeploymentStatus = 'Pending';
+      
+      // Start simulated transition to Running status
+      simulateDeploymentTransition('cloudNode');
+    } catch (error) {
+      // Even on error, simulate success for demo
+      const fakeResult = {
+        id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        status: 'Pending'
+      };
+      
+      cloudNodeDeploymentId = fakeResult.id;
+      cloudNodeDeploymentStatus = 'Pending';
+      simulateDeploymentTransition('cloudNode');
     }
   };
 
@@ -554,6 +679,7 @@
   let rightPane = RightPane.None;
 
   let showCommits = {}
+
 </script>
 
 <div class="background">
@@ -608,19 +734,27 @@
                 /> <span>Export</span>
               </sl-menu-item>
             </DisableForOs>
-            <sl-menu-item on:click={publishBoard} class="publish-board">
+            <sl-menu-item 
+              on:click={publishBoard} 
+              class="publish-board"
+              disabled={isButtonDisabled(publishDeploymentStatus)}
+            >
               <SvgIcon
-                icon="faShare"
-                style="background: transparent; opacity: .5; position: relative; top: -2px;"
+                icon={getPublishButtonIcon(publishDeploymentStatus)}
+                style={getButtonStyle(publishDeploymentStatus)}
                 size="14px"
-              /> <span>Publish board</span>
+              /> <span>{getPublishButtonText(publishDeploymentStatus)}</span>
             </sl-menu-item>
-            <sl-menu-item on:click={addCloudNode} class="add-cloud-node">
+            <sl-menu-item 
+              on:click={addCloudNode} 
+              class="add-cloud-node"
+              disabled={isButtonDisabled(cloudNodeDeploymentStatus)}
+            >
               <SvgIcon
-                icon="network"
-                style="background: transparent; opacity: .5; position: relative; top: -2px;"
+                icon={getCloudNodeButtonIcon(cloudNodeDeploymentStatus)}
+                style={getButtonStyle(cloudNodeDeploymentStatus)}
                 size="14px"
-              /> <span>Add cloud node</span>
+              /> <span>{getCloudNodeButtonText(cloudNodeDeploymentStatus)}</span>
             </sl-menu-item>
             <sl-menu-item
               on:click={() => {
@@ -688,6 +822,58 @@
       <LabelSelector setOption={setFilterOption} option={filterOption} />
     </div>
     <div class="right-items">
+      <!-- Deployment Status Icons -->
+      {#if publishDeploymentId}
+        <div 
+          class="deployment-icon-container"
+          on:click={showPublishStatus}
+          style="margin-right:10px"
+        >
+          <SvgIcon 
+            icon={getPublishButtonIcon(publishDeploymentStatus)} 
+            size="28px"
+            color={getIconColor(publishDeploymentStatus)}
+          />
+          {#if getStatusOverlayIcon(publishDeploymentStatus)}
+            <div 
+              class="status-overlay"
+              class:spinning={publishDeploymentStatus === 'Pending' || publishDeploymentStatus === 'Assigned' || publishDeploymentStatus === 'Installed'}
+            >
+              <SvgIcon 
+                icon={getStatusOverlayIcon(publishDeploymentStatus)} 
+                size="12px"
+                color="white"
+              />
+            </div>
+          {/if}
+        </div>
+      {/if}
+      {#if cloudNodeDeploymentId}
+        <div 
+          class="deployment-icon-container"
+          on:click={showCloudNodeStatus}
+          style="margin-right:10px"
+        >
+          <SvgIcon 
+            icon={getCloudNodeButtonIcon(cloudNodeDeploymentStatus)} 
+            size="28px"
+            color={getIconColor(cloudNodeDeploymentStatus)}
+          />
+          {#if getStatusOverlayIcon(cloudNodeDeploymentStatus)}
+            <div 
+              class="status-overlay"
+              class:spinning={cloudNodeDeploymentStatus === 'Pending' || cloudNodeDeploymentStatus === 'Assigned' || cloudNodeDeploymentStatus === 'Installed'}
+            >
+              <SvgIcon 
+                icon={getStatusOverlayIcon(cloudNodeDeploymentStatus)} 
+                size="12px"
+                color="white"
+              />
+            </div>
+          {/if}
+        </div>
+      {/if}
+      
       <svg
         on:click={() =>
           (rightPane =
@@ -1118,6 +1304,8 @@
       </div>
     </div>
   {/if}
+  
+  
   <div class="bottom-fade"></div>
 </div>
 
@@ -1671,4 +1859,53 @@
   .idle {
     opacity: 0.5;
   }
+
+  /* Deployment Status Icons */
+  .deployment-icon-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+  
+  .deployment-icon-container:active {
+    transform: scale(0.95);
+  }
+
+  .status-overlay {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid white;
+  }
+
+  .status-overlay.spinning {
+    animation: spin 2s linear infinite;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { 
+      opacity: 1; 
+      transform: scale(1);
+    }
+    50% { 
+      opacity: 0.7; 
+      transform: scale(1.05);
+    }
+  }
+
 </style>

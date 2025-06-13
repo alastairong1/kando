@@ -1,20 +1,70 @@
 <script>
   import { onMount } from 'svelte';
   import Board from './Board.svelte';
-  import { fetchBoardState } from './api.js';
 
   let board = null;
+  let mockId = null;
 
-  // Base URL for the board API endpoints. Set this to your gateway
-  // domain plus the DNA hash and cell id you want to read from, ending
-  // with `/content`.
-  const BOARD_API_BASE = 'http://localhost:3001/mock-dna/mock-id/content';
+  // Extract mock-id from URL path
+  function getMockIdFromPath() {
+    const path = window.location.pathname;
+    const segments = path.split('/').filter(s => s.length > 0);
+    return segments.length > 0 ? segments[0] : null;
+  }
 
-  onMount(async () => {
-    try {
-      board = await fetchBoardState(BOARD_API_BASE);
-    } catch (e) {
-      console.error('Failed to load board', e);
+  // Mock board data
+  function createMockBoard(boardId) {
+    return {
+      name: "Breakfast Factory",
+      description: "A delicious breakfast production line",
+      categories: [
+        {
+          id: "todo",
+          name: "To Do",
+          cards: [
+            {
+              id: "eggs",
+              text: "Eggs"
+            }
+          ]
+        },
+        {
+          id: "doing", 
+          name: "Doing",
+          cards: [
+            {
+              id: "pancakes",
+              text: "Pancakes"
+            }
+          ]
+        },
+        {
+          id: "done",
+          name: "Done",
+          cards: [
+            {
+              id: "sausages",
+              text: "Sausages"
+            }
+          ]
+        }
+      ]
+    };
+  }
+
+  onMount(() => {
+    mockId = getMockIdFromPath();
+    
+    if (mockId === '683b697294a7e8893427f87e') {
+      // Load mock board for the specific ID
+      board = createMockBoard(mockId);
+    } else {
+      // Show a different message for other IDs
+      board = {
+        name: "Board Not Found",
+        description: "This board ID does not exist in the demo",
+        categories: []
+      };
     }
   });
 </script>
@@ -25,3 +75,12 @@
 {:else}
   <p>Loading board...</p>
 {/if}
+
+<style>
+  h1 {
+    text-align: center;
+    color: #333;
+    margin: 1rem 0;
+    font-family: Arial, sans-serif;
+  }
+</style>

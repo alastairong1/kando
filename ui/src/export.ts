@@ -65,7 +65,6 @@ export const deserializeExport = (jsonExport:string) : Array<BoardState> => {
         return exportObject.boards
 
     } catch (e) {
-        console.log("Error importing boards:", e)
         return []
     }
 }

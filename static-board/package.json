@@ -2,15 +2,19 @@
   "name": "static-board",
   "version": "1.0.0",
   "scripts": {
-    "dev": "vite",
+    "dev": "VITE_API_HOST=http://localhost:3001 vite",
     "build": "vite build",
+    "build:prod": "VITE_API_HOST=https://gateway.web-bridge.holo.host vite build",
     "preview": "vite preview",
-    "mock-server": "node mock-server.js"
+    "mock-server": "node mock-server.js",
+    "deploy": "npm run build && wrangler pages deploy dist",
+    "deploy:prod": "npm run build:prod && wrangler pages deploy dist"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^2.0.2",
     "svelte": "^3.59.2",
-    "vite": "^4.0.4"
+    "vite": "^4.0.4",
+    "wrangler": "^3.114.9"
   },
   "dependencies": {
     "@holochain-syn/core": "^0.500.0-rc.0",

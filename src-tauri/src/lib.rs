@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use tauri_plugin_holochain::{HolochainPluginConfig, HolochainExt, NetworkConfig, vec_to_locked};
 use url2::Url2;
 use tauri::AppHandle;
+use serde_json::json;
 
 const APP_ID: &'static str = "kando";
 
@@ -16,7 +17,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::default()
-                .level(log::LevelFilter::Warn)
+                .level(if cfg!(debug_assertions) { log::LevelFilter::Debug } else { log::LevelFilter::Warn })
                 .build(),
         )
         .plugin(tauri_plugin_opener::init())
@@ -87,8 +88,8 @@ async fn setup(handle: AppHandle) -> anyhow::Result<()> {
 
 fn network_config() -> NetworkConfig {
     let mut network_config = NetworkConfig::default();
-    network_config.signal_url = url2::url2!("{}", "https://dev-test-bootstrap2.holochain.org/");
-    network_config.bootstrap_url = url2::url2!("{}", "wss://dev-test-bootstrap2.holochain.org/");
+    network_config.bootstrap_url = url2::url2!("https://dev-test-bootstrap2.holochain.org/");
+    network_config.signal_url = url2::url2!("wss://dev-test-bootstrap2.holochain.org/");
     network_config.webrtc_config = Some(json!({ "iceServers": [ { "urls": ["stun:stun.l.google.com:19302"] }]}));
 
     // Don't use the bootstrap service on tauri dev mode

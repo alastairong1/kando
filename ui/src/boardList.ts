@@ -117,7 +117,6 @@ export class BoardList {
                                 }
                             }
                         } catch(e) {
-                            console.log("Error sending notification to frame", e)
                         }
                     })
                 }
@@ -191,10 +190,8 @@ export class BoardList {
             board = (await toPromise(this.boardData2.get(hash))).board
             if (board) {
                 await board.join()
-                console.log("joined")
                 this.activeBoard.update((n) => {return board} )
             } else {
-                console.log("Board not found on setActiveBoard")
             }
         } else {
             this.activeBoard.update((n) => {return undefined} )
@@ -235,7 +232,6 @@ export class BoardList {
             if (leave) {
                 const board = await this.getBoard(hash)
                 if (board) await board.leave()
-                else console.log("Board Not Found on closeActiveBoard")
             }
             this.setActiveBoard(undefined)
         }

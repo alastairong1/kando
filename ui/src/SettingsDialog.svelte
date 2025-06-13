@@ -30,11 +30,9 @@
             if ( importedBoardStates.length > 0) {
                 const boards:Array<Board> = []
                 for (const b of importedBoardStates) {
-                    console.log("importing", b.name)
                     try {
                         boards.push(await store.boardList.makeBoard(b))
                     } catch(e) {
-                        console.log("error importing", b.name, e)
                     }
                 }
                 if (importedBoardStates.length == 1) {

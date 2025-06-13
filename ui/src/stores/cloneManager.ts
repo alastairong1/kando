@@ -98,7 +98,6 @@ export class KanDoCloneManagerStore {
   }
   
   private async _loadActiveDnaHash(appInfo: AppInfo) {
-    console.log("_loadActiveDnaHash", appInfo);
 
     // Load active dna hash from local storage
     const activeDnaHashB64 = localStorage.getItem("activeDnaHash");    
@@ -119,7 +118,6 @@ export class KanDoCloneManagerStore {
   }
 
   private _setDefaultActiveDnaHash(appInfo: AppInfo) {
-    console.log("_setDefaultActiveDnaHash", appInfo);
 
     if (appInfo.cell_info[ROLE_NAME][0].type !== CellType.Provisioned) {
       throw("incorrect cell type, must be provisioned")
@@ -129,7 +127,6 @@ export class KanDoCloneManagerStore {
   }
   
   private _saveActiveDnaHash(val: DnaHash) {
-    console.log("_saveActiveDnaHash", val);
 
     if(val !== undefined && val !== null) {
       localStorage.setItem("activeDnaHash", encodeHashToBase64(val));

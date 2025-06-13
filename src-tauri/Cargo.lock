@@ -4553,7 +4553,7 @@ dependencies = [
 
 [[package]]
 name = "kandoapp"
-version = "0.10.9"
+version = "0.11.8"
 dependencies = [
  "anyhow",
  "app_dirs2",
